@@ -63,7 +63,9 @@ fetch = (urlp, time = "10408", page = 1, data = {}) -> new bluebird (res, rej) -
   data = {}
   for inp in inputs =>
     [name, value] = [$(inp).attr(\name), $(inp).val!]
-    if name? and name and value? and $(inp).attr(\type) == \hidden => data[name] = value
+    #if name? and name and value? => data[name] = value
+    if name? and name and value? and $(inp).attr(\type) == \hidden => data[\name] = value
+  data[\ctl00$ContentPlaceHolder1$PageNum] = 99
   next = 1
   #data.__EVENTTARGET = \ctl00$ContentPlaceHolder1$GV_List
   #data.__EVENTARGUMENT = "Page$#next"
