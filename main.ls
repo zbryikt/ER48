@@ -15,22 +15,29 @@ init = -> new bluebird (res, rej) ->
   }, _
   res!
 
-fetch = (url, time = "10408", page = 1) -> new bluebird (res, rej) ->
+fetch = (urlp, time = "10408", page = 1, data = {}) -> new bluebird (res, rej) ->
+  formData = {} <<< data
+  if formData.__VIEWSTATE =>
+    formData.__EVENTTARGET = \ctl00$ContentPlaceHolder1$GV_List
+    formData.__EVENTARGUMENT = "Page$#page"
+  params = do
+    YYQN: time #10408
+    Branch: ""
+    AreaID: ""
+    Special: ""
+    Hosp_Name: ""
+    Hosp_ID: ""
+    PageNum: 99
+    Q5C1_ID: 2
+    Q5C2_ID: 1652
+    IsMap: ""
+  paramstring = ["#k=#v" for k,v of params].join(\&)
+  urlp = "#url?#paramstring"
   (e,r,b) <- request {
-    url
+    url: urlp
     jar
     method: \POST
-    formData: do
-      YYQN: time #10408
-      Branch: ""
-      AreaID: ""
-      Special: ""
-      Hosp_Name: ""
-      Hosp_ID: ""
-      PageNum: 99
-      Q5C1_ID: 2
-      Q5C2_ID: 1652
-      IsMap: ""
+    formData
 
   }, _
   $ = cheerio.load(b)
@@ -55,31 +62,32 @@ fetch = (url, time = "10408", page = 1) -> new bluebird (res, rej) ->
   list = []
   data = {}
   for inp in inputs =>
-    [name, value] = [$(inp).attr("name"), $(inp).val!]
-    if name? and name and value? => data[name] = value
+    [name, value] = [$(inp).attr(\name), $(inp).val!]
+    if name? and name and value? and $(inp).attr(\type) == \hidden => data[name] = value
   next = 1
-  data.__EVENTTARGET = \ctl00$ContentPlaceHolder1$GV_List
-  data.__EVENTARGUMENT = "Page$#next"
+  #data.__EVENTTARGET = \ctl00$ContentPlaceHolder1$GV_List
+  #data.__EVENTARGUMENT = "Page$#next"
   pagenum = $("tr td[colspan=8] tr td").length
   curpage = $("tr td[colspan=8] tr span").text!
-  res {pagenum, ret}
+  res {pagenum, ret, data}
 
 result = []
 
 fin = ->
   fs.write-file-sync \output.json, JSON.stringify(result)
 
-next = (qidx = 0, page = 1) ->
+next = (qidx = 0, page = 1, data = {}) ->
   Q = Qs[qidx]
   console.log "fetch #Q #page... ( #{parseInt(100 * qidx / Qs.length)}% )"
-  (payload) <- fetch url, Q, page .then
+  (payload) <- fetch url, Q, page, data .then
+  data <<< payload.data
   result := result ++ payload.ret
   if page < payload.pagenum => page += 1
   else =>
     page := 1
     if qidx < Qs.length - 1 => qidx := qidx + 1
     else => return fin!
-  next qidx, page
+  next qidx, page, data
 
 url = \http://www.nhi.gov.tw/AmountInfoWeb/N_Query15S.aspx
 url = \http://www.nhi.gov.tw/AmountInfoWeb/search.aspx
